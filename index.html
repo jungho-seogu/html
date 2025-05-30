@@ -26,7 +26,7 @@
     async function init() {
       const response = await fetch(DATA_URL);
       const json = await response.json();
-      rawData = json.data.filter(d => d['매출'] >= 0); // ✅ 음수 매출 제거
+      rawData = json.data.filter(d => d['매출'] >= 0);
 
       const 아이템명_목록 = [...new Set(rawData.map(d => d['아이템명']))].sort();
       const itemSelect = document.getElementById('itemSelect');
@@ -42,14 +42,13 @@
       itemSelect.addEventListener('change', updateCodeSelect);
       codeSelect.addEventListener('change', drawChart);
 
-      drawChart(); // 초기 전체 데이터
+      drawChart();
     }
 
     function updateCodeSelect() {
       const selectedItem = document.getElementById('itemSelect').value;
       const codeSelect = document.getElementById('codeSelect');
 
-      // 상품코드 필터링
       let codes;
       if (selectedItem) {
         codes = [...new Set(rawData.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))];
@@ -66,7 +65,7 @@
         codeSelect.appendChild(option);
       });
 
-      drawChart(); // 드롭다운 바뀔 때 차트도 다시
+      drawChart();
     }
 
     function drawChart() {
@@ -74,7 +73,6 @@
       const selectedCode = document.getElementById('codeSelect').value;
 
       let filteredData = rawData;
-
       if (selectedItem) {
         filteredData = filteredData.filter(d => d['아이템명'] === selectedItem);
       }
@@ -82,50 +80,60 @@
         filteredData = filteredData.filter(d => d['상품코드'] === selectedCode);
       }
 
-      // 아이템명-월별 총 매출 계산 (퍼센트용)
-      const itemMonthTotal = {};
+      const 월총매출 = {};
       rawData.forEach(d => {
-        const key = `${d['아이템명']}_${d['월']}`;
-        if (!itemMonthTotal[key]) itemMonthTotal[key] = 0;
-        itemMonthTotal[key] += d['매출'];
+        if (!월총매출[d['월']]) 월총매출[d['월']] = 0;
+        월총매출[d['월']] += d['매출'];
       });
 
-      const x = [];
-      const y = [];
-      const text = [];
-
+      const groups = {};
       filteredData.forEach(d => {
-        const key = `${d['아이템명']}_${d['월']}`;
-        const total = itemMonthTotal[key] || 1; // 0 나누기 방지
-        let hoverText = `월: ${d['월']}<br>아이템명: ${d['아이템명']}<br>상품코드: ${d['상품코드']}<br>판매금액: ${d['매출'].toLocaleString()}<br>수량: ${d['수량']}`;
-
-        if (selectedCode) {
-          const percent = ((d['매출'] / total) * 100).toFixed(2);
-          hoverText += `<br>비중: ${percent}%`;
+        const code = d['상품코드'];
+        if (!groups[code]) {
+          groups[code] = { x: [], y: [], text: [] };
         }
+        const totalSales = 월총매출[d['월']] || 1;
+        let hoverText = `월: ${d['월']}<br>아이템명: ${d['아이템명']}<br>상품코드: ${d['상품코드']}<br>판매금액: ${d['매출'].toLocaleString()}<br>수량: ${d['수량']}<br>해당 월 총매출: ${totalSales.toLocaleString()}`;
 
-        x.push(d['월'].toString());
-        y.push(d['매출']);
-        text.push(hoverText);
+        groups[code].x.push(d['월'].toString());
+        groups[code].y.push(d['매출']);
+        groups[code].text.push(hoverText);
       });
 
-      const trace = {
-        x: x,
-        y: y,
-        text: text,
+      const colors = [
+        'blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan'
+      ];
+
+      const traces = Object.keys(groups).map((code, idx) => ({
+        x: groups[code].x,
+        y: groups[code].y,
+        text: groups[code].text,
         mode: 'markers',
         type: 'scatter',
-        marker: { size: 8 }
+        name: code,
+        marker: { color: colors[idx % colors.length], size: 8 }
+      }));
+
+      // 💡 총매출 꺾은선 그래프 추가
+      const totalSalesTrace = {
+        x: Object.keys(월총매출).sort(),
+        y: Object.keys(월총매출).sort().map(월 => 월총매출[월]),
+        mode: 'lines+markers',
+        name: '월별 총매출',
+        line: { color: 'black', width: 2, dash: 'solid' },
+        marker: { size: 6 }
       };
 
+      traces.push(totalSalesTrace); // ✅ 점 + 꺾은선 같이 그리기
+
       const layout = {
-        title: '월별 매출 점도표',
+        title: '월별 매출 점도표 + 총매출 꺾은선',
         xaxis: { title: '월', type: 'category' },
         yaxis: { title: '판매금액', rangemode: 'tozero' },
         hovermode: 'closest'
       };
 
-      Plotly.newPlot('chart_div', [trace], layout);
+      Plotly.newPlot('chart_div', traces, layout);
     }
 
     init();
