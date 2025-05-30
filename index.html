@@ -114,23 +114,9 @@
         marker: { color: colors[idx % colors.length], size: 8 }
       }));
 
-      // 💡 총매출 꺾은선 그래프 수정
-      const sortedMonths = Object.keys(월총매출).map(Number).sort((a, b) => a - b);
-
-      const totalSalesTrace = {
-        x: sortedMonths,
-        y: sortedMonths.map(월 => 월총매출[월]),
-        mode: 'lines+markers',
-        name: '월별 총매출',
-        line: { color: 'black', width: 2 },
-        marker: { size: 6 }
-      };
-
-      traces.push(totalSalesTrace); // ✅ 점 + 꺾은선 같이 그리기
-
       const layout = {
-        title: '월별 매출 점도표 + 총매출 꺾은선',
-        xaxis: { title: '월', type: 'linear' },  // ✅ 중요
+        title: '월별 매출 점도표',
+        xaxis: { title: '월', type: 'category' },
         yaxis: { title: '판매금액', rangemode: 'tozero' },
         hovermode: 'closest'
       };
