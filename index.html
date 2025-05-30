@@ -1,9 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="ko">
 <head>
+  <meta charset="UTF-8">
+  <title>월별 아이템 매출 점도표</title>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script>
-    // Web App URL
+    // ✅ Web App URL
     const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
 
     google.charts.load('current', { packages: ['corechart'] });
@@ -15,7 +17,7 @@
       const response = await fetch(DATA_URL);
       const json = await response.json();
 
-      data = json.data; // [{월, 아이템명, 상품코드, 판매금액} 형태 데이터
+      data = json.data; // [{월, 아이템명, 상품코드, 판매금액} 형태 데이터]
 
       const 아이템명_목록 = [...new Set(data.map(d => d['아이템명']))].sort();
 
@@ -82,7 +84,6 @@
           판매금액
         ]);
       });
-
 
       const dataTable = google.visualization.arrayToDataTable(chartData);
 
