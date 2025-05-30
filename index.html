@@ -5,7 +5,6 @@
     <title>월별 아이템 매출 점도표</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
-      // Web App URL
       const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
 
       google.charts.load('current', { packages: ['corechart'] });
@@ -17,14 +16,13 @@
         const response = await fetch(DATA_URL);
         const json = await response.json();
 
-        data = json.data; // [{월, 아이템명, 상품코드, 판매금액}]
+        data = json.data;
 
         const 아이템명_목록 = [...new Set(data.map(d => d['아이템명']))].sort();
 
         const itemSelect = document.getElementById('itemSelect');
         const codeSelect = document.getElementById('codeSelect');
 
-        // 아이템명 옵션 생성
         아이템명_목록.forEach(item => {
           const option = document.createElement('option');
           option.value = item;
@@ -32,7 +30,6 @@
           itemSelect.appendChild(option);
         });
 
-        // 아이템명 선택 시 상품코드 옵션 갱신
         itemSelect.addEventListener('change', () => {
           const selectedItem = itemSelect.value;
 
@@ -78,14 +75,15 @@
         filtered.forEach(d => {
           const 판매금액 = d['판매금액'] || 0;
           chartData.push([
-            Number(d['월']), // 월을 숫자(Number)로 유지
-            d['아이템명'],
+            Number(d['월']),        // 월: number
+            String(d['아이템명']),   // 아이템명: string
             `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`,
             판매금액
           ]);
         });
 
-        const dataTable = google.visualization.arrayToDataTable(chartData);
+        // 🚨 타입 추론 false
+        const dataTable = google.visualization.arrayToDataTable(chartData, false);
 
         const options = {
           title: '월별 아이템명 매출 점도표',
