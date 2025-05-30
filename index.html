@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8">
+    <title>월별 아이템 매출 점도표</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
-      // Web App URL (스프레드시트 웹앱 URL 넣기)
+      // Web App URL
       const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
 
       google.charts.load('current', { packages: ['corechart'] });
@@ -15,7 +17,7 @@
         const response = await fetch(DATA_URL);
         const json = await response.json();
 
-        data = json.data; // [{월, 아이템명, 상품코드, 판매금액} 형태 데이터]
+        data = json.data; // [{월, 아이템명, 상품코드, 판매금액}]
 
         const 아이템명_목록 = [...new Set(data.map(d => d['아이템명']))].sort();
 
@@ -76,7 +78,7 @@
         filtered.forEach(d => {
           const 판매금액 = d['판매금액'] || 0;
           chartData.push([
-            Number(d['월']),  // 월 → 숫자 변환!!
+            Number(d['월']), // 월을 숫자(Number)로 유지
             d['아이템명'],
             `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`,
             판매금액
@@ -87,7 +89,7 @@
 
         const options = {
           title: '월별 아이템명 매출 점도표',
-          hAxis: { title: '월', format: '####' },
+          hAxis: { title: '월' },
           vAxis: { title: '아이템명' },
           bubble: { textStyle: { fontSize: 11 } },
           colorAxis: { colors: ['#aec7e8', '#1f77b4'] },
