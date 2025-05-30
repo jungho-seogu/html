@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8" />
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
-      // Web App URL
+      // Web App URL (스프레드시트 웹앱 URL 넣기)
       const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
 
       google.charts.load('current', { packages: ['corechart'] });
@@ -77,7 +76,7 @@
         filtered.forEach(d => {
           const 판매금액 = d['판매금액'] || 0;
           chartData.push([
-            Number(d['월']),  // ← 여기! 월을 숫자로 변환
+            Number(d['월']),  // 월 → 숫자 변환!!
             d['아이템명'],
             `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`,
             판매금액
@@ -88,7 +87,7 @@
 
         const options = {
           title: '월별 아이템명 매출 점도표',
-          hAxis: { title: '월' },
+          hAxis: { title: '월', format: '####' },
           vAxis: { title: '아이템명' },
           bubble: { textStyle: { fontSize: 11 } },
           colorAxis: { colors: ['#aec7e8', '#1f77b4'] },
