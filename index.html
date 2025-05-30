@@ -5,6 +5,7 @@
     <title>월별 아이템 매출 점도표</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
+      // 구글 앱스 스크립트 Web App URL
       const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
 
       google.charts.load('current', { packages: ['corechart'] });
@@ -23,6 +24,7 @@
         const itemSelect = document.getElementById('itemSelect');
         const codeSelect = document.getElementById('codeSelect');
 
+        // 아이템명 목록
         아이템명_목록.forEach(item => {
           const option = document.createElement('option');
           option.value = item;
@@ -32,7 +34,6 @@
 
         itemSelect.addEventListener('change', () => {
           const selectedItem = itemSelect.value;
-
           const filteredCodes = [...new Set(data.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))].sort();
 
           codeSelect.innerHTML = '<option value="">전체</option>';
@@ -60,7 +61,8 @@
         const selectedItem = itemSelect.value;
         const selectedCode = codeSelect.value;
 
-        let chartData = [['아이템명', '월', '판매금액', { role: 'tooltip', type: 'string' }]];
+        // 🟢 BubbleChart 포맷: [ID, X, Y, Size, Tooltip]
+        let chartData = [['아이템명', '월', '판매금액', '수량', { role: 'tooltip', type: 'string' }]];
 
         const filtered = data.filter(d => {
           return (!selectedItem || d['아이템명'] === selectedItem) &&
@@ -73,11 +75,13 @@
         }
 
         filtered.forEach(d => {
-          const 판매금액 = d['판매금액'] || 0;
+          const 판매금액 = d['매출'] || 0;
+          const 수량 = d['수량'] || 1;  // 수량이 0이면 버블 안 보여서 최소 1
           chartData.push([
             String(d['아이템명']),
             Number(d['월']),
             판매금액,
+            수량,
             `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`
           ]);
         });
