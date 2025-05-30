@@ -1,118 +1,117 @@
 <!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>월별 아이템 매출 점도표</title>
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  <script>
-    // ✅ Web App URL
-    const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>
+      // Web App URL
+      const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
 
-    google.charts.load('current', { packages: ['corechart'] });
-    google.charts.setOnLoadCallback(init);
+      google.charts.load('current', { packages: ['corechart'] });
+      google.charts.setOnLoadCallback(init);
 
-    let data = [];
+      let data = [];
 
-    async function init() {
-      const response = await fetch(DATA_URL);
-      const json = await response.json();
+      async function init() {
+        const response = await fetch(DATA_URL);
+        const json = await response.json();
 
-      data = json.data; // [{월, 아이템명, 상품코드, 판매금액} 형태 데이터]
+        data = json.data; // [{월, 아이템명, 상품코드, 판매금액} 형태 데이터]
 
-      const 아이템명_목록 = [...new Set(data.map(d => d['아이템명']))].sort();
+        const 아이템명_목록 = [...new Set(data.map(d => d['아이템명']))].sort();
 
-      const itemSelect = document.getElementById('itemSelect');
-      const codeSelect = document.getElementById('codeSelect');
+        const itemSelect = document.getElementById('itemSelect');
+        const codeSelect = document.getElementById('codeSelect');
 
-      // 아이템명 옵션 생성
-      아이템명_목록.forEach(item => {
-        const option = document.createElement('option');
-        option.value = item;
-        option.text = item;
-        itemSelect.appendChild(option);
-      });
-
-      // 아이템명 선택 시 상품코드 옵션 갱신
-      itemSelect.addEventListener('change', () => {
-        const selectedItem = itemSelect.value;
-
-        const filteredCodes = [...new Set(data.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))].sort();
-
-        codeSelect.innerHTML = '<option value="">전체</option>';
-        filteredCodes.forEach(code => {
+        // 아이템명 옵션 생성
+        아이템명_목록.forEach(item => {
           const option = document.createElement('option');
-          option.value = code;
-          option.text = code;
-          codeSelect.appendChild(option);
+          option.value = item;
+          option.text = item;
+          itemSelect.appendChild(option);
+        });
+
+        // 아이템명 선택 시 상품코드 옵션 갱신
+        itemSelect.addEventListener('change', () => {
+          const selectedItem = itemSelect.value;
+
+          const filteredCodes = [...new Set(data.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))].sort();
+
+          codeSelect.innerHTML = '<option value="">전체</option>';
+          filteredCodes.forEach(code => {
+            const option = document.createElement('option');
+            option.value = code;
+            option.text = code;
+            codeSelect.appendChild(option);
+          });
+
+          drawChart();
+        });
+
+        codeSelect.addEventListener('change', () => {
+          drawChart();
         });
 
         drawChart();
-      });
-
-      codeSelect.addEventListener('change', () => {
-        drawChart();
-      });
-
-      drawChart();
-    }
-
-    function drawChart() {
-      const itemSelect = document.getElementById('itemSelect');
-      const codeSelect = document.getElementById('codeSelect');
-
-      const selectedItem = itemSelect.value;
-      const selectedCode = codeSelect.value;
-
-      let chartData = [['월', '아이템명', { role: 'tooltip', type: 'string' }, '판매금액']];
-
-      const filtered = data.filter(d => {
-        return (!selectedItem || d['아이템명'] === selectedItem) &&
-               (!selectedCode || d['상품코드'] === selectedCode);
-      });
-
-      if (filtered.length === 0) {
-        document.getElementById('chart_div').innerHTML = '📌 데이터가 없습니다. 다른 아이템을 선택해보세요.';
-        return;
       }
 
-      filtered.forEach(d => {
-        const 판매금액 = d['판매금액'] || 0;  // 🔥 안전하게 기본값 0
-        chartData.push([
-          d['월'].toString(),
-          d['아이템명'],
-          `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`,
-          판매금액
-        ]);
-      });
+      function drawChart() {
+        const itemSelect = document.getElementById('itemSelect');
+        const codeSelect = document.getElementById('codeSelect');
 
-      const dataTable = google.visualization.arrayToDataTable(chartData);
+        const selectedItem = itemSelect.value;
+        const selectedCode = codeSelect.value;
 
-      const options = {
-        title: '월별 아이템명 매출 점도표',
-        hAxis: { title: '월' },
-        vAxis: { title: '아이템명' },
-        bubble: { textStyle: { fontSize: 11 } },
-        colorAxis: { colors: ['#aec7e8', '#1f77b4'] },
-        tooltip: { isHtml: true }
-      };
+        let chartData = [['월', '아이템명', { role: 'tooltip', type: 'string' }, '판매금액']];
 
-      const chart = new google.visualization.BubbleChart(document.getElementById('chart_div'));
-      chart.draw(dataTable, options);
-    }
-  </script>
-</head>
-<body>
-  <h2>월별 아이템 매출 점도표</h2>
-  <div>
-    <label>아이템명: </label>
-    <select id="itemSelect">
-      <option value="">전체</option>
-    </select>
-    <label>상품코드: </label>
-    <select id="codeSelect">
-      <option value="">전체</option>
-    </select>
-  </div>
-  <div id="chart_div" style="width: 100%; height: 600px;"></div>
-</body>
+        const filtered = data.filter(d => {
+          return (!selectedItem || d['아이템명'] === selectedItem) &&
+                 (!selectedCode || d['상품코드'] === selectedCode);
+        });
+
+        if (filtered.length === 0) {
+          document.getElementById('chart_div').innerHTML = '📌 데이터가 없습니다. 다른 아이템을 선택해보세요.';
+          return;
+        }
+
+        filtered.forEach(d => {
+          const 판매금액 = d['판매금액'] || 0;
+          chartData.push([
+            Number(d['월']),  // ← 여기! 월을 숫자로 변환
+            d['아이템명'],
+            `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`,
+            판매금액
+          ]);
+        });
+
+        const dataTable = google.visualization.arrayToDataTable(chartData);
+
+        const options = {
+          title: '월별 아이템명 매출 점도표',
+          hAxis: { title: '월' },
+          vAxis: { title: '아이템명' },
+          bubble: { textStyle: { fontSize: 11 } },
+          colorAxis: { colors: ['#aec7e8', '#1f77b4'] },
+          tooltip: { isHtml: true }
+        };
+
+        const chart = new google.visualization.BubbleChart(document.getElementById('chart_div'));
+        chart.draw(dataTable, options);
+      }
+    </script>
+  </head>
+  <body>
+    <h2>월별 아이템 매출 점도표</h2>
+    <div>
+      <label>아이템명: </label>
+      <select id="itemSelect">
+        <option value="">전체</option>
+      </select>
+      <label>상품코드: </label>
+      <select id="codeSelect">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div id="chart_div" style="width: 100%; height: 600px;"></div>
+  </body>
 </html>
