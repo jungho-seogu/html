@@ -29,8 +29,6 @@
       rawData = json.data.filter(d => d['매출'] >= 0); // ✅ 음수 매출 제거
 
       const 아이템명_목록 = [...new Set(rawData.map(d => d['아이템명']))].sort();
-      const 상품코드_목록 = [...new Set(rawData.map(d => d['상품코드']))].sort();
-
       const itemSelect = document.getElementById('itemSelect');
       const codeSelect = document.getElementById('codeSelect');
 
@@ -41,17 +39,34 @@
         itemSelect.appendChild(option);
       });
 
-      상품코드_목록.forEach(code => {
+      itemSelect.addEventListener('change', updateCodeSelect);
+      codeSelect.addEventListener('change', drawChart);
+
+      drawChart(); // 초기 전체 데이터
+    }
+
+    function updateCodeSelect() {
+      const selectedItem = document.getElementById('itemSelect').value;
+      const codeSelect = document.getElementById('codeSelect');
+
+      // 상품코드 필터링
+      let codes;
+      if (selectedItem) {
+        codes = [...new Set(rawData.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))];
+      } else {
+        codes = [...new Set(rawData.map(d => d['상품코드']))];
+      }
+
+      codes.sort();
+      codeSelect.innerHTML = '<option value="">전체</option>';
+      codes.forEach(code => {
         const option = document.createElement('option');
         option.value = code;
         option.text = code;
         codeSelect.appendChild(option);
       });
 
-      itemSelect.addEventListener('change', drawChart);
-      codeSelect.addEventListener('change', drawChart);
-
-      drawChart();
+      drawChart(); // 드롭다운 바뀔 때 차트도 다시
     }
 
     function drawChart() {
