@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script>
+      // Web App URL
+      const DATA_URL = 'https://script.google.com/macros/s/AKfycbzpHS0oywk1R0NiATf_F5IB4zo_59S6tlBjIigjtPDbug-qLRkpNbpiK559D74BGDn3/exec';
+
+      google.charts.load('current', {packages:['corechart']});
+      google.charts.setOnLoadCallback(init);
+
+      async function init() {
+        const response = await fetch(DATA_URL);
+        const json = await response.json();
+
+        const data = json.data; // [{월: '202401', 아이템명: '계절상품_가습기', 상품코드: 'CODE-1234', 판매금액: 123456}, ...]
+
+        const 아이템명_목록 = [...new Set(data.map(d => d['아이템명']))].sort();
+
+        const itemSelect = document.getElementById('itemSelect');
+        const codeSelect = document.getElementById('codeSelect');
+
+        // 아이템명 선택박스
+        아이템명_목록.forEach(item => {
+          const option = document.createElement('option');
+          option.value = item;
+          option.text = item;
+          itemSelect.appendChild(option);
+        });
+
+        itemSelect.addEventListener('change', () => {
+          const selectedItem = itemSelect.value;
+
+          const filteredCodes = [...new Set(data.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))].sort();
+
+          codeSelect.innerHTML = '<option value="">전체</option>';
+          filteredCodes.forEach(code => {
+            const option = document.createElement('option');
+            option.value = code;
+            option.text = code;
+            codeSelect.appendChild(option);
+          });
+
+          drawChart();
+        });
+
+        codeSelect.addEventListener('change', () => {
+          drawChart();
+        });
+
+        function drawChart() {
+          const selectedItem = itemSelect.value;
+          const selectedCode = codeSelect.value;
+
+          let chartData = [['월', '아이템명', { role: 'tooltip', type: 'string' }, '판매금액']];
+
+          data.filter(d => {
+            return (!selectedItem || d['아이템명'] === selectedItem) &&
+                   (!selectedCode || d['상품코드'] === selectedCode);
+          }).forEach(d => {
+            chartData.push([
+              d['월'].toString(),
+              d['아이템명'],
+              `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${d['판매금액'].toLocaleString()}`,
+              d['판매금액']
+            ]);
+          });
+
+          const dataTable = google.visualization.arrayToDataTable(chartData);
+
+          const options = {
+            title: '월별 아이템명 매출 점도표',
+            hAxis: { title: '월' },
+            vAxis: { title: '아이템명' },
+            bubble: { textStyle: { fontSize: 11 } },
+            colorAxis: { colors: ['#aec7e8', '#1f77b4'] },
+            tooltip: { isHtml: true }
+          };
+
+          const chart = new google.visualization.BubbleChart(document.getElementById('chart_div'));
+          chart.draw(dataTable, options);
+        }
+
+        drawChart();
+      }
+    </script>
+  </head>
+  <body>
+    <h2>월별 아이템 매출 점도표</h2>
+    <div>
+      <label>아이템명: </label>
+      <select id="itemSelect">
+        <option value="">전체</option>
+      </select>
+      <label>상품코드: </label>
+      <select id="codeSelect">
+        <option value="">전체</option>
+      </select>
+    </div>
+    <div id="chart_div" style="width: 100%; height: 600px;"></div>
+  </body>
+</html>
