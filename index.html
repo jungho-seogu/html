@@ -5,7 +5,6 @@
     <title>월별 아이템 매출 점도표</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script>
-      // 구글 앱스 스크립트 Web App URL
       const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
 
       google.charts.load('current', { packages: ['corechart'] });
@@ -24,7 +23,6 @@
         const itemSelect = document.getElementById('itemSelect');
         const codeSelect = document.getElementById('codeSelect');
 
-        // 아이템명 목록
         아이템명_목록.forEach(item => {
           const option = document.createElement('option');
           option.value = item;
@@ -32,23 +30,25 @@
           itemSelect.appendChild(option);
         });
 
-        itemSelect.addEventListener('change', () => {
-          const selectedItem = itemSelect.value;
-          const filteredCodes = [...new Set(data.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))].sort();
+        itemSelect.addEventListener('change', updateCodeOptions);
+        codeSelect.addEventListener('change', drawChart);
 
-          codeSelect.innerHTML = '<option value="">전체</option>';
-          filteredCodes.forEach(code => {
-            const option = document.createElement('option');
-            option.value = code;
-            option.text = code;
-            codeSelect.appendChild(option);
-          });
+        drawChart();
+      }
 
-          drawChart();
-        });
+      function updateCodeOptions() {
+        const itemSelect = document.getElementById('itemSelect');
+        const codeSelect = document.getElementById('codeSelect');
+        const selectedItem = itemSelect.value;
 
-        codeSelect.addEventListener('change', () => {
-          drawChart();
+        const filteredCodes = [...new Set(data.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))].sort();
+
+        codeSelect.innerHTML = '<option value="">전체</option>';
+        filteredCodes.forEach(code => {
+          const option = document.createElement('option');
+          option.value = code;
+          option.text = code;
+          codeSelect.appendChild(option);
         });
 
         drawChart();
@@ -61,8 +61,15 @@
         const selectedItem = itemSelect.value;
         const selectedCode = codeSelect.value;
 
-        // 🟢 BubbleChart 포맷: [ID, X, Y, Size, Tooltip]
-        let chartData = [['아이템명', '월', '판매금액', '수량', { role: 'tooltip', type: 'string' }]];
+        // X: 월 (숫자), Y: 아이템명 (카테고리 인덱스)
+        let chartData = [['월', '아이템명 인덱스', {type: 'string', role: 'tooltip'}]];
+
+        // 아이템명 -> 인덱스 맵핑
+        const uniqueItems = [...new Set(data.map(d => d['아이템명']))];
+        const itemIndexMap = {};
+        uniqueItems.forEach((item, index) => {
+          itemIndexMap[item] = index + 1;  // 1부터 시작
+        });
 
         const filtered = data.filter(d => {
           return (!selectedItem || d['아이템명'] === selectedItem) &&
@@ -76,28 +83,27 @@
 
         filtered.forEach(d => {
           const 판매금액 = d['매출'] || 0;
-          const 수량 = d['수량'] || 1;  // 수량이 0이면 버블 안 보여서 최소 1
           chartData.push([
-            String(d['아이템명']),
             Number(d['월']),
-            판매금액,
-            수량,
+            itemIndexMap[d['아이템명']],
             `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`
           ]);
         });
 
-        const dataTable = google.visualization.arrayToDataTable(chartData, false);
+        const dataTable = google.visualization.arrayToDataTable(chartData);
 
         const options = {
-          title: '월별 아이템명 매출 점도표',
-          hAxis: { title: '월' },
-          vAxis: { title: '아이템명' },
-          bubble: { textStyle: { fontSize: 11 } },
-          colorAxis: { colors: ['#aec7e8', '#1f77b4'] },
+          title: '월별 아이템 매출 점도표',
+          hAxis: { title: '월', format: '####' },
+          vAxis: {
+            title: '아이템명',
+            ticks: uniqueItems.map((item, index) => ({v: index + 1, f: item})) // y축을 아이템명으로 매핑
+          },
+          legend: 'none',
           tooltip: { isHtml: true }
         };
 
-        const chart = new google.visualization.BubbleChart(document.getElementById('chart_div'));
+        const chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
         chart.draw(dataTable, options);
       }
     </script>
