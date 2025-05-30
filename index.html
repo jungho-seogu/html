@@ -3,57 +3,117 @@
 <head>
   <meta charset="UTF-8">
   <title>월별 아이템 매출 점도표</title>
-  <!-- ✅ Plotly.js 라이브러리 -->
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
   <h2>월별 아이템 매출 점도표</h2>
+  <div>
+    <label>아이템명: </label>
+    <select id="itemSelect">
+      <option value="">전체</option>
+    </select>
+    <label>상품코드: </label>
+    <select id="codeSelect">
+      <option value="">전체</option>
+    </select>
+  </div>
   <div id="chart_div" style="width: 100%; height: 600px;"></div>
 
   <script>
-    // ✅ 데이터 URL
     const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
+    let rawData = [];
 
-    async function drawChart() {
+    async function init() {
       const response = await fetch(DATA_URL);
       const json = await response.json();
-      const data = json.data;
+      rawData = json.data.filter(d => d['매출'] >= 0); // ✅ 음수 매출 제거
 
-      // ✅ 아이템명 + 상품코드별 그룹핑
-      const groupMap = {};
+      const 아이템명_목록 = [...new Set(rawData.map(d => d['아이템명']))].sort();
+      const 상품코드_목록 = [...new Set(rawData.map(d => d['상품코드']))].sort();
 
-      data.forEach(d => {
-        const key = `${d['아이템명']}_${d['상품코드']}`;
-        if (!groupMap[key]) groupMap[key] = { x: [], y: [], text: [] };
-        groupMap[key].x.push(d['월'].toString());
-        groupMap[key].y.push(d['매출']);
-        groupMap[key].text.push(`아이템명: ${d['아이템명']}<br>상품코드: ${d['상품코드']}<br>매출: ${d['매출'].toLocaleString()}`);
+      const itemSelect = document.getElementById('itemSelect');
+      const codeSelect = document.getElementById('codeSelect');
+
+      아이템명_목록.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.text = item;
+        itemSelect.appendChild(option);
       });
 
-      // ✅ Plotly traces 생성
-      const traces = Object.keys(groupMap).map(key => ({
-        x: groupMap[key].x,
-        y: groupMap[key].y,
-        text: groupMap[key].text,
+      상품코드_목록.forEach(code => {
+        const option = document.createElement('option');
+        option.value = code;
+        option.text = code;
+        codeSelect.appendChild(option);
+      });
+
+      itemSelect.addEventListener('change', drawChart);
+      codeSelect.addEventListener('change', drawChart);
+
+      drawChart();
+    }
+
+    function drawChart() {
+      const selectedItem = document.getElementById('itemSelect').value;
+      const selectedCode = document.getElementById('codeSelect').value;
+
+      let filteredData = rawData;
+
+      if (selectedItem) {
+        filteredData = filteredData.filter(d => d['아이템명'] === selectedItem);
+      }
+      if (selectedCode) {
+        filteredData = filteredData.filter(d => d['상품코드'] === selectedCode);
+      }
+
+      // 아이템명-월별 총 매출 계산 (퍼센트용)
+      const itemMonthTotal = {};
+      rawData.forEach(d => {
+        const key = `${d['아이템명']}_${d['월']}`;
+        if (!itemMonthTotal[key]) itemMonthTotal[key] = 0;
+        itemMonthTotal[key] += d['매출'];
+      });
+
+      const x = [];
+      const y = [];
+      const text = [];
+
+      filteredData.forEach(d => {
+        const key = `${d['아이템명']}_${d['월']}`;
+        const total = itemMonthTotal[key] || 1; // 0 나누기 방지
+        let hoverText = `월: ${d['월']}<br>아이템명: ${d['아이템명']}<br>상품코드: ${d['상품코드']}<br>판매금액: ${d['매출'].toLocaleString()}<br>수량: ${d['수량']}`;
+
+        if (selectedCode) {
+          const percent = ((d['매출'] / total) * 100).toFixed(2);
+          hoverText += `<br>비중: ${percent}%`;
+        }
+
+        x.push(d['월'].toString());
+        y.push(d['매출']);
+        text.push(hoverText);
+      });
+
+      const trace = {
+        x: x,
+        y: y,
+        text: text,
         mode: 'markers',
         type: 'scatter',
-        name: key,
         marker: { size: 8 }
-      }));
+      };
 
-      // ✅ 레이아웃
       const layout = {
         title: '월별 매출 점도표',
         xaxis: { title: '월', type: 'category' },
-        yaxis: { title: '매출액', rangemode: 'tozero' },
+        yaxis: { title: '판매금액', rangemode: 'tozero' },
         hovermode: 'closest'
       };
 
-      // ✅ 차트 그리기
-      Plotly.newPlot('chart_div', traces, layout);
+      Plotly.newPlot('chart_div', [trace], layout);
     }
 
-    drawChart();
+    init();
   </script>
 </body>
 </html>
