@@ -60,7 +60,7 @@
         const selectedItem = itemSelect.value;
         const selectedCode = codeSelect.value;
 
-        let chartData = [['월', '아이템명', { role: 'tooltip', type: 'string' }, '판매금액']];
+        let chartData = [['아이템명', '월', '판매금액', { role: 'tooltip', type: 'string' }]];
 
         const filtered = data.filter(d => {
           return (!selectedItem || d['아이템명'] === selectedItem) &&
@@ -75,14 +75,13 @@
         filtered.forEach(d => {
           const 판매금액 = d['판매금액'] || 0;
           chartData.push([
-            Number(d['월']),        // 월: number
-            String(d['아이템명']),   // 아이템명: string
-            `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`,
-            판매금액
+            String(d['아이템명']),
+            Number(d['월']),
+            판매금액,
+            `월: ${d['월']}\n아이템명: ${d['아이템명']}\n매출: ${판매금액.toLocaleString()}`
           ]);
         });
 
-        // 🚨 타입 추론 false
         const dataTable = google.visualization.arrayToDataTable(chartData, false);
 
         const options = {
