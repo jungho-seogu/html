@@ -1,139 +1,144 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>월별 매출 점도표</title>
-    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
-    <style>
-      select { margin-right: 10px; }
-    </style>
-  </head>
-  <body>
-    <h2>월별 아이템 매출 점도표</h2>
-    <div>
-      <label>아이템명: </label>
-      <select id="itemSelect">
-        <option value="">전체</option>
-      </select>
-      <label>상품코드: </label>
-      <select id="codeSelect">
-        <option value="">전체</option>
-      </select>
-    </div>
-    <div id="chart" style="width: 100%; height: 600px;"></div>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>월별 아이템 매출 점도표</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+  <h2>월별 아이템 매출 점도표</h2>
+  <div>
+    <label>아이템명: </label>
+    <select id="itemSelect">
+      <option value="">전체</option>
+    </select>
+    <label>상품코드: </label>
+    <select id="codeSelect">
+      <option value="">전체</option>
+    </select>
+  </div>
+  <div id="chart_div" style="width: 100%; height: 600px;"></div>
 
-    <script>
-      const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
-      let data = [];
+  <script>
+    const DATA_URL = 'https://script.google.com/macros/s/AKfycbyyYJWkbTbR001BFrTq5AU_qpAZ3ttN-0cn1G6V5ASfqrKCkZg1yMqLdmXcWe94S0c/exec';
+    let rawData = [];
 
-      async function init() {
-        const res = await fetch(DATA_URL);
-        const json = await res.json();
-        data = json.data.filter(d => d['매출'] >= 0); // 🔥 음수 매출 제외
+    async function init() {
+      const response = await fetch(DATA_URL);
+      const json = await response.json();
+      rawData = json.data.filter(d => d['매출'] >= 0);
 
-        const itemSelect = document.getElementById('itemSelect');
-        const codeSelect = document.getElementById('codeSelect');
+      const 아이템명_목록 = [...new Set(rawData.map(d => d['아이템명']))].sort();
+      const itemSelect = document.getElementById('itemSelect');
+      const codeSelect = document.getElementById('codeSelect');
 
-        const 아이템들 = [...new Set(data.map(d => d['아이템명']))].sort();
-        아이템들.forEach(item => {
-          const opt = document.createElement('option');
-          opt.value = item;
-          opt.text = item;
-          itemSelect.appendChild(opt);
-        });
+      아이템명_목록.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item;
+        option.text = item;
+        itemSelect.appendChild(option);
+      });
 
-        itemSelect.addEventListener('change', () => {
-          const selectedItem = itemSelect.value;
-          const 관련상품코드 = [...new Set(data.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))].sort();
-          codeSelect.innerHTML = '<option value="">전체</option>';
-          관련상품코드.forEach(code => {
-            const opt = document.createElement('option');
-            opt.value = code;
-            opt.text = code;
-            codeSelect.appendChild(opt);
-          });
-          drawChart();
-        });
+      itemSelect.addEventListener('change', updateCodeSelect);
+      codeSelect.addEventListener('change', drawChart);
 
-        codeSelect.addEventListener('change', drawChart);
-        drawChart();
+      drawChart();
+    }
+
+    function updateCodeSelect() {
+      const selectedItem = document.getElementById('itemSelect').value;
+      const codeSelect = document.getElementById('codeSelect');
+
+      let codes;
+      if (selectedItem) {
+        codes = [...new Set(rawData.filter(d => d['아이템명'] === selectedItem).map(d => d['상품코드']))];
+      } else {
+        codes = [...new Set(rawData.map(d => d['상품코드']))];
       }
 
-      function drawChart() {
-        const item = document.getElementById('itemSelect').value;
-        const code = document.getElementById('codeSelect').value;
+      codes.sort();
+      codeSelect.innerHTML = '<option value="">전체</option>';
+      codes.forEach(code => {
+        const option = document.createElement('option');
+        option.value = code;
+        option.text = code;
+        codeSelect.appendChild(option);
+      });
 
-        const filtered = data.filter(d =>
-          (!item || d['아이템명'] === item) &&
-          (!code || d['상품코드'] === code)
-        );
+      drawChart();
+    }
 
-        const 월총매출 = {};
-        data.forEach(d => {
-          const 월 = d['월'];
-          월총매출[월] = (월총매출[월] || 0) + d['매출'];
-        });
+    function drawChart() {
+      const selectedItem = document.getElementById('itemSelect').value;
+      const selectedCode = document.getElementById('codeSelect').value;
 
-        const 색상 = {};
-        const 색상리스트 = [
-          '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
-          '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
-        ];
-        let 색상인덱스 = 0;
-
-        const traceMap = {};
-
-        filtered.forEach(d => {
-          const key = d['상품코드'] || d['아이템명'];
-          if (!traceMap[key]) {
-            const color = 색상리스트[색상인덱스++ % 색상리스트.length];
-            traceMap[key] = {
-              x: [],
-              y: [],
-              text: [],
-              mode: 'markers',
-              type: 'scatter',
-              name: key,
-              marker: { size: 8, color }
-            };
-          }
-
-          const 월 = d['월'];
-          const 매출 = d['매출'];
-          const 수량 = d['수량'];
-          const 전체 = 월총매출[월];
-          const 비율 = 전체 ? (매출 / 전체 * 100).toFixed(1) + '%' : '';
-
-          const tip = `월: ${월}<br>아이템명: ${d['아이템명']}<br>상품코드: ${d['상품코드']}<br>판매금액: ${매출.toLocaleString()}<br>수량: ${수량}` +
-                      (code ? `<br>전체 대비: ${비율}` : '');
-
-          traceMap[key].x.push(월);
-          traceMap[key].y.push(매출);
-          traceMap[key].text.push(tip);
-        });
-
-        const dotTraces = Object.values(traceMap);
-
-        const sortedMonths = Object.keys(월총매출).map(Number).sort((a, b) => a - b);
-        const totalTrace = {
-          x: sortedMonths,
-          y: sortedMonths.map(m => 월총매출[m]),
-          mode: 'lines+markers',
-          type: 'scatter',
-          name: '월 총매출',
-          line: { color: 'black', width: 2 },
-          marker: { size: 4 }
-        };
-
-        Plotly.newPlot('chart', [...dotTraces, totalTrace], {
-          title: '월별 매출 점도표',
-          xaxis: { title: '월', tickformat: 'd' },
-          yaxis: { title: '판매금액' },
-          hovermode: 'closest'
-        });
+      let filteredData = rawData;
+      if (selectedItem) {
+        filteredData = filteredData.filter(d => d['아이템명'] === selectedItem);
+      }
+      if (selectedCode) {
+        filteredData = filteredData.filter(d => d['상품코드'] === selectedCode);
       }
 
-      init();
-    </script>
-  </body>
+      const 월총매출 = {};
+      rawData.forEach(d => {
+        if (!월총매출[d['월']]) 월총매출[d['월']] = 0;
+        월총매출[d['월']] += d['매출'];
+      });
+
+      const groups = {};
+      filteredData.forEach(d => {
+        const code = d['상품코드'];
+        if (!groups[code]) {
+          groups[code] = { x: [], y: [], text: [] };
+        }
+        const totalSales = 월총매출[d['월']] || 1;
+        let hoverText = `월: ${d['월']}<br>아이템명: ${d['아이템명']}<br>상품코드: ${d['상품코드']}<br>판매금액: ${d['매출'].toLocaleString()}<br>수량: ${d['수량']}<br>해당 월 총매출: ${totalSales.toLocaleString()}`;
+
+        groups[code].x.push(d['월'].toString());
+        groups[code].y.push(d['매출']);
+        groups[code].text.push(hoverText);
+      });
+
+      const colors = [
+        'blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan'
+      ];
+
+      const traces = Object.keys(groups).map((code, idx) => ({
+        x: groups[code].x,
+        y: groups[code].y,
+        text: groups[code].text,
+        mode: 'markers',
+        type: 'scatter',
+        name: code,
+        marker: { color: colors[idx % colors.length], size: 8 }
+      }));
+
+      // 💡 총매출 꺾은선 그래프 수정
+      const sortedMonths = Object.keys(월총매출).map(Number).sort((a, b) => a - b);
+
+      const totalSalesTrace = {
+        x: sortedMonths,
+        y: sortedMonths.map(월 => 월총매출[월]),
+        mode: 'lines+markers',
+        name: '월별 총매출',
+        line: { color: 'black', width: 2 },
+        marker: { size: 6 }
+      };
+
+      traces.push(totalSalesTrace); // ✅ 점 + 꺾은선 같이 그리기
+
+      const layout = {
+        title: '월별 매출 점도표 + 총매출 꺾은선',
+        xaxis: { title: '월', type: 'linear' },  // ✅ 중요
+        yaxis: { title: '판매금액', rangemode: 'tozero' },
+        hovermode: 'closest'
+      };
+
+      Plotly.newPlot('chart_div', traces, layout);
+    }
+
+    init();
+  </script>
+</body>
 </html>
